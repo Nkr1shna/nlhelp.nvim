@@ -36,13 +36,16 @@ type Keybinding struct {
 type RAGAgent interface {
 	// ProcessQuery processes a natural language query and returns relevant keybindings
 	ProcessQuery(query string) (*QueryResult, error)
-	
+
 	// UpdateVectorDB updates the vector database with new keybindings
 	UpdateVectorDB(keybindings []Keybinding) error
-	
+
 	// Initialize sets up the RAG agent with required dependencies
 	Initialize() error
-	
+
 	// HealthCheck verifies the agent is functioning properly
 	HealthCheck() error
+
+	// GetStats returns statistics about the RAG agent
+	GetStats() map[string]interface{}
 }
