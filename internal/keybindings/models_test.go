@@ -1,6 +1,7 @@
 package keybindings
 
 import (
+	"encoding/json"
 	"testing"
 
 	"nvim-smart-keybind-search/internal/interfaces"
@@ -11,11 +12,11 @@ func TestNewKeybindingParser(t *testing.T) {
 	if parser == nil {
 		t.Fatal("NewKeybindingParser returned nil")
 	}
-	
+
 	if parser.validModes == nil {
 		t.Error("validModes not initialized")
 	}
-	
+
 	if parser.keyPattern == nil {
 		t.Error("keyPattern not initialized")
 	}
@@ -23,7 +24,7 @@ func TestNewKeybindingParser(t *testing.T) {
 
 func TestParseKeybinding(t *testing.T) {
 	parser := NewKeybindingParser()
-	
+
 	tests := []struct {
 		name    string
 		input   map[string]interface{}
@@ -104,7 +105,7 @@ func TestParseKeybinding(t *testing.T) {
 			wantErr: false,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := parser.ParseKeybinding(tt.input)
@@ -112,11 +113,11 @@ func TestParseKeybinding(t *testing.T) {
 				t.Errorf("ParseKeybinding() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			
+
 			if tt.wantErr {
 				return
 			}
-			
+
 			// Check all fields except ID (which is generated)
 			if got.Keys != tt.want.Keys {
 				t.Errorf("Keys = %v, want %v", got.Keys, tt.want.Keys)
@@ -133,7 +134,7 @@ func TestParseKeybinding(t *testing.T) {
 			if got.Plugin != tt.want.Plugin {
 				t.Errorf("Plugin = %v, want %v", got.Plugin, tt.want.Plugin)
 			}
-			
+
 			// Check metadata
 			if len(got.Metadata) != len(tt.want.Metadata) {
 				t.Errorf("Metadata length = %v, want %v", len(got.Metadata), len(tt.want.Metadata))
@@ -143,7 +144,7 @@ func TestParseKeybinding(t *testing.T) {
 					t.Errorf("Metadata[%s] = %v, want %v", k, got.Metadata[k], v)
 				}
 			}
-			
+
 			// Check that ID was generated
 			if got.ID == "" {
 				t.Error("ID should be generated when not provided")
@@ -154,7 +155,7 @@ func TestParseKeybinding(t *testing.T) {
 
 func TestValidateKeybinding(t *testing.T) {
 	parser := NewKeybindingParser()
-	
+
 	tests := []struct {
 		name    string
 		kb      *interfaces.Keybinding
@@ -238,7 +239,7 @@ func TestValidateKeybinding(t *testing.T) {
 			wantErr: false,
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := parser.ValidateKeybinding(tt.kb)
@@ -251,42 +252,42 @@ func TestValidateKeybinding(t *testing.T) {
 
 func TestGenerateID(t *testing.T) {
 	parser := NewKeybindingParser()
-	
+
 	kb1 := &interfaces.Keybinding{
 		Keys:    "dd",
 		Command: "delete line",
 		Mode:    "n",
 		Plugin:  "",
 	}
-	
+
 	kb2 := &interfaces.Keybinding{
 		Keys:    "dd",
 		Command: "delete line",
 		Mode:    "n",
 		Plugin:  "",
 	}
-	
+
 	kb3 := &interfaces.Keybinding{
 		Keys:    "yy",
 		Command: "yank line",
 		Mode:    "n",
 		Plugin:  "",
 	}
-	
+
 	id1 := parser.GenerateID(kb1)
 	id2 := parser.GenerateID(kb2)
 	id3 := parser.GenerateID(kb3)
-	
+
 	// Same keybindings should generate same ID
 	if id1 != id2 {
 		t.Errorf("Same keybindings should generate same ID: %s != %s", id1, id2)
 	}
-	
+
 	// Different keybindings should generate different IDs
 	if id1 == id3 {
 		t.Errorf("Different keybindings should generate different IDs: %s == %s", id1, id3)
 	}
-	
+
 	// ID should start with "kb_"
 	if len(id1) < 3 || id1[:3] != "kb_" {
 		t.Errorf("ID should start with 'kb_': %s", id1)
@@ -295,7 +296,7 @@ func TestGenerateID(t *testing.T) {
 
 func TestGenerateHash(t *testing.T) {
 	parser := NewKeybindingParser()
-	
+
 	kb1 := &interfaces.Keybinding{
 		Keys:        "dd",
 		Command:     "delete line",
@@ -304,7 +305,7 @@ func TestGenerateHash(t *testing.T) {
 		Plugin:      "",
 		Metadata:    map[string]string{"category": "edit"},
 	}
-	
+
 	kb2 := &interfaces.Keybinding{
 		Keys:        "dd",
 		Command:     "delete line",
@@ -313,7 +314,7 @@ func TestGenerateHash(t *testing.T) {
 		Plugin:      "",
 		Metadata:    map[string]string{"category": "edit"},
 	}
-	
+
 	kb3 := &interfaces.Keybinding{
 		Keys:        "dd",
 		Command:     "delete line",
@@ -322,16 +323,16 @@ func TestGenerateHash(t *testing.T) {
 		Plugin:      "",
 		Metadata:    map[string]string{"category": "edit"},
 	}
-	
+
 	hash1 := parser.GenerateHash(kb1)
 	hash2 := parser.GenerateHash(kb2)
 	hash3 := parser.GenerateHash(kb3)
-	
+
 	// Same keybindings should generate same hash
 	if hash1 != hash2 {
 		t.Errorf("Same keybindings should generate same hash: %s != %s", hash1, hash2)
 	}
-	
+
 	// Different keybindings should generate different hashes
 	if hash1 == hash3 {
 		t.Errorf("Different keybindings should generate different hashes: %s == %s", hash1, hash3)
@@ -340,7 +341,7 @@ func TestGenerateHash(t *testing.T) {
 
 func TestJSONSerialization(t *testing.T) {
 	parser := NewKeybindingParser()
-	
+
 	original := &interfaces.Keybinding{
 		ID:          "test1",
 		Keys:        "dd",
@@ -353,19 +354,19 @@ func TestJSONSerialization(t *testing.T) {
 			"priority": "high",
 		},
 	}
-	
+
 	// Test ToJSON
 	jsonData, err := parser.ToJSON(original)
 	if err != nil {
 		t.Fatalf("ToJSON failed: %v", err)
 	}
-	
+
 	// Test FromJSON
 	restored, err := parser.FromJSON(jsonData)
 	if err != nil {
 		t.Fatalf("FromJSON failed: %v", err)
 	}
-	
+
 	// Compare all fields
 	if restored.ID != original.ID {
 		t.Errorf("ID mismatch: %s != %s", restored.ID, original.ID)
@@ -385,7 +386,7 @@ func TestJSONSerialization(t *testing.T) {
 	if restored.Plugin != original.Plugin {
 		t.Errorf("Plugin mismatch: %s != %s", restored.Plugin, original.Plugin)
 	}
-	
+
 	// Compare metadata
 	if len(restored.Metadata) != len(original.Metadata) {
 		t.Errorf("Metadata length mismatch: %d != %d", len(restored.Metadata), len(original.Metadata))
@@ -399,7 +400,7 @@ func TestJSONSerialization(t *testing.T) {
 
 func TestParseKeybindingsFromJSON(t *testing.T) {
 	parser := NewKeybindingParser()
-	
+
 	jsonData := `[
 		{
 			"keys": "dd",
@@ -415,16 +416,16 @@ func TestParseKeybindingsFromJSON(t *testing.T) {
 			"plugin": "builtin"
 		}
 	]`
-	
+
 	keybindings, err := parser.ParseKeybindingsFromJSON([]byte(jsonData))
 	if err != nil {
 		t.Fatalf("ParseKeybindingsFromJSON failed: %v", err)
 	}
-	
+
 	if len(keybindings) != 2 {
 		t.Errorf("Expected 2 keybindings, got %d", len(keybindings))
 	}
-	
+
 	// Check first keybinding
 	if keybindings[0].Keys != "dd" {
 		t.Errorf("First keybinding keys: %s != dd", keybindings[0].Keys)
@@ -432,12 +433,48 @@ func TestParseKeybindingsFromJSON(t *testing.T) {
 	if keybindings[0].Command != "delete line" {
 		t.Errorf("First keybinding command: %s != delete line", keybindings[0].Command)
 	}
-	
+
 	// Check second keybinding
 	if keybindings[1].Keys != "yy" {
 		t.Errorf("Second keybinding keys: %s != yy", keybindings[1].Keys)
 	}
 	if keybindings[1].Plugin != "builtin" {
 		t.Errorf("Second keybinding plugin: %s != builtin", keybindings[1].Plugin)
+	}
+}
+
+func TestToJSONArray(t *testing.T) {
+	parser := NewKeybindingParser()
+
+	keybindings := []interfaces.Keybinding{
+		{
+			ID:          "test1",
+			Keys:        "dd",
+			Command:     "delete line",
+			Description: "Delete current line",
+			Mode:        "n",
+		},
+		{
+			ID:          "test2",
+			Keys:        "yy",
+			Command:     "yank line",
+			Description: "Copy current line",
+			Mode:        "n",
+		},
+	}
+
+	jsonData, err := parser.ToJSONArray(keybindings)
+	if err != nil {
+		t.Fatalf("ToJSONArray failed: %v", err)
+	}
+
+	// Verify it's valid JSON
+	var parsed []map[string]interface{}
+	if err := json.Unmarshal(jsonData, &parsed); err != nil {
+		t.Fatalf("Failed to parse JSON array: %v", err)
+	}
+
+	if len(parsed) != 2 {
+		t.Errorf("Expected 2 keybindings in JSON, got %d", len(parsed))
 	}
 }
