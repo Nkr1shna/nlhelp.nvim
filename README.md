@@ -24,12 +24,9 @@ A Neovim plugin that provides intelligent, natural language search for keybindin
 **Note:** The Go backend automatically handles Ollama installation and model management. It will install Ollama if not present and download the required model (llama3.2:3b) automatically on first run.
 
 ### Installation
-
-```
-
 #### 1. Install the Plugin
-
 **Using Lazy.nvim:**
+```
 ```lua
 return {
   "Nkr1shna/nlhelp.nvim",
