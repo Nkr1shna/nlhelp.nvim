@@ -94,7 +94,7 @@ Prerequisites:
    https://ollama.ai
 
 2. Download a model:
-   >ollama pull llama2:7b
+   >ollama pull llama3.2:3b
 
 3. Install the plugin using your plugin manager:
 
@@ -314,7 +314,7 @@ Common Issues:
 2. Ollama Not Running:
    • Install Ollama: https://ollama.ai
    • Start Ollama: ollama serve
-   • Download model: ollama pull llama2:7b
+   • Download model: ollama pull llama3.2:3b
    • Check status: curl http://localhost:11434/api/tags
 
 3. ChromaDB Issues:
@@ -329,7 +329,7 @@ Common Issues:
 
 5. Slow Response Times:
    • Check system resources: top
-   • Use smaller model: ollama pull llama2:3b
+   • Use smaller model: ollama pull llama3.2:3b
    • Check network connectivity: ping localhost
    • Increase timeout in config
 

@@ -83,7 +83,7 @@ curl -fsSL https://ollama.ai/install.sh | sh
 ollama serve
 
 # In another terminal, pull a model
-ollama pull llama2:7b
+ollama pull llama3.2:3b
 ```
 
 **Check Ollama status:**
@@ -182,7 +182,7 @@ htop  # if available
 **Optimize Ollama model:**
 ```bash
 # Use smaller model
-ollama pull llama2:3b
+ollama pull llama3.2:3b
 
 # Update config.json
 {
@@ -293,7 +293,7 @@ export OLLAMA_MODELS=/path/to/models
 
 **Use smaller model:**
 ```bash
-ollama pull llama2:3b
+ollama pull llama3.2:3b
 ```
 
 **Restart services:**
@@ -381,7 +381,7 @@ file data/chroma/*
 
 **Use smaller LLM model:**
 ```bash
-ollama pull llama2:3b
+ollama pull llama3.2:3b
 ```
 
 **Optimize ChromaDB:**

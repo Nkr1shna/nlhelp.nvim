@@ -377,7 +377,7 @@ echo ✓ Installation completed successfully!
 echo.
 echo Next steps:
 echo 1. Install Ollama: https://ollama.ai
-echo 2. Download a model: ollama pull llama2:7b
+echo 2. Download a model: ollama pull llama3.2:3b
 echo 3. Start the server: start_server.bat
 echo 4. Configure your Neovim plugin manager
 echo.

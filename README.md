@@ -19,27 +19,15 @@ A Neovim plugin that provides intelligent, natural language search for keybindin
 1. **Neovim 0.7+**
 2. **Go 1.21+** (for backend)
 3. **Python 3.8+** (for ChromaDB)
-4. **Ollama** (for LLM inference)
+4. **Ollama** (automatically installed by backend)
+
+**Note:** The Go backend automatically handles Ollama installation and model management. It will install Ollama if not present and download the required model (llama3.2:3b) automatically on first run.
 
 ### Installation
 
-#### 1. Install Dependencies
-
-**Install Ollama:**
-```bash
-# macOS/Linux
-curl -fsSL https://ollama.ai/install.sh | sh
-
-# Windows
-# Download from https://ollama.ai
 ```
 
-**Download a model:**
-```bash
-ollama pull llama2:7b
-```
-
-#### 2. Install the Plugin
+#### 1. Install the Plugin
 
 **Using Lazy.nvim:**
 ```lua
@@ -95,7 +83,7 @@ lua require("nvim-smart-keybind-search").setup({
 })
 ```
 
-#### 3. Setup Backend
+#### 2. Setup Backend
 
 **Automatic Setup (Recommended):**
 ```bash
@@ -124,238 +112,22 @@ go run scripts/build_database.go
 1. **Open the search interface:**
    ```vim
    :SmartKeybindSearch
-   ```
-
-2. **Type your query in natural language:**
-   - "delete current line"
-   - "move to next word"
-   - "copy text to clipboard"
-   - "find and replace text"
-
-3. **Select and execute the keybinding**
-
-#### Commands
-
-- `:SmartKeybindSearch [query]` - Search for keybindings
-- `:SmartKeybindSync` - Sync your custom keybindings
-- `:SmartKeybindHealth` - Check system health
-
-#### Keymaps
-
-The plugin automatically sets up these keymaps:
-- `<leader>ks` - Open search interface
-- `<leader>kh` - Show health status
-
-## Configuration
-
-### Plugin Configuration
-
-```lua
-require("nvim-smart-keybind-search").setup({
-  -- Server configuration
-  server_host = "localhost",
-  server_port = 8080,
-  
-  -- Auto-start server when Neovim starts
-  auto_start = true,
-  
-  -- Health check interval (seconds)
-  health_check_interval = 30,
-  
-  -- Search configuration
-  search = {
-    -- Maximum number of results
-    max_results = 10,
-    
-    -- Minimum relevance score (0.0 - 1.0)
-    min_relevance = 0.3,
-    
-    -- Include explanations in results
-    show_explanations = true,
-  },
-  
-  -- UI configuration
-  ui = {
-    -- Use telescope for results display
-    use_telescope = true,
-    
-    -- Custom telescope configuration
-    telescope_config = {
-      -- Your telescope config here
-    },
-  },
-  
-  -- Logging configuration
-  logging = {
-    level = "info",
-    file = "./logs/plugin.log",
-  },
-})
-```
-
-### Server Configuration
-
-The server can be configured via `config.json`:
-
-```json
-{
-  "server": {
-    "host": "localhost",
-    "port": 8080,
-    "timeout": 30
-  },
-  "chromadb": {
-    "host": "localhost",
-    "port": 8000,
-    "path": "./data/chroma"
-  },
-  "ollama": {
-    "host": "localhost",
-    "port": 11434,
-    "model": "llama2:7b"
-  },
-  "logging": {
-    "level": "info",
-    "file": "./logs/server.log"
-  }
-}
-```
-
-## Architecture
-
-### Components
-
-- **Go Backend**: JSON-RPC server handling queries and database operations
-- **ChromaDB**: Vector database for semantic search
-- **Ollama**: Local LLM for query understanding and response generation
-- **Lua Plugin**: Neovim integration and UI
-
-### Data Flow
-
-1. User enters natural language query
-2. Query is sent to Go backend via JSON-RPC
-3. Backend vectorizes query and searches ChromaDB
-4. Results are processed by LLM for relevance ranking
-5. Ranked results are returned to Neovim
-6. User selects and executes keybinding
-
-## API Reference
-
-### RPC Methods
-
-#### Query
-```json
-{
-  "method": "Query",
-  "params": {
-    "query": "delete current line",
-    "limit": 10
-  }
-}
-```
-
-Response:
-```json
-{
-  "results": [
-    {
-      "keybinding": {
-        "keys": "dd",
-        "command": "delete line",
-        "description": "Delete current line",
-        "mode": "n"
-      },
-      "relevance": 0.95,
-      "explanation": "This is the standard vim command to delete the current line."
-    }
-  ],
-  "reasoning": "The query matches the delete line command."
-}
-```
-
-#### SyncKeybindings
-```json
-{
-  "method": "SyncKeybindings",
-  "params": {
-    "keybindings": [
-      {
-        "keys": "<leader>w",
-        "command": "save file",
-        "description": "Save current file",
-        "mode": "n"
-      }
-    ],
-    "clear_existing": false
-  }
-}
-```
-
-#### HealthCheck
-```json
-{
-  "method": "HealthCheck",
-  "params": {}
-}
-```
-
-## Troubleshooting
-
-### Common Issues
-
-#### Server Won't Start
-
-1. **Check if port is in use:**
-   ```bash
-   lsof -i :8080  # Linux/macOS
-   netstat -an | findstr :8080  # Windows
-   ```
 
 2. **Check Ollama is running:**
    ```bash
    curl http://localhost:11434/api/tags
-   ```
-
-3. **Check ChromaDB is running:**
-   ```bash
-   curl http://localhost:8000/api/v1/heartbeat
-   ```
 
 #### No Results Found
 
 1. **Check database is populated:**
    ```bash
    ./health_check.sh
-   ```
-
-2. **Re-sync keybindings:**
-   ```vim
-   :SmartKeybindSync
-   ```
 
 3. **Check query relevance threshold:**
    ```lua
    -- Lower the threshold in config
    min_relevance = 0.1
-   ```
 
-#### Slow Response Times
-
-1. **Check server resources:**
-   ```bash
-   ./health_check.sh
-   ```
-
-2. **Optimize Ollama model:**
-   ```bash
-   # Use a smaller model
-   ollama pull llama2:3b
-   ```
-
-3. **Check network connectivity:**
-   ```bash
-   ping localhost
-   ```
 
 ### Health Checks
 
