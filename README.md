@@ -26,7 +26,6 @@ A Neovim plugin that provides intelligent, natural language search for keybindin
 ### Installation
 #### 1. Install the Plugin
 **Using Lazy.nvim:**
-```
 ```lua
 return {
   "Nkr1shna/nlhelp.nvim",
