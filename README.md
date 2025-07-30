@@ -44,7 +44,7 @@ ollama pull llama2:7b
 **Using Lazy.nvim:**
 ```lua
 return {
-  "nest/nvim-smart-keybind-search",
+  "Nkr1shna/nlhelp.nvim",
   event = "VeryLazy",
   config = function()
     require("nvim-smart-keybind-search").setup({
@@ -64,7 +64,7 @@ return {
 ```lua
 return require('packer').startup(function(use)
   use {
-    'nest/nvim-smart-keybind-search',
+    'Nkr1shna/nlhelp.nvim',
     config = function()
       require("nvim-smart-keybind-search").setup({
         server_host = "localhost",
@@ -83,7 +83,7 @@ end)
 **Using vim-plug:**
 ```vim
 call plug#begin()
-Plug 'nest/nvim-smart-keybind-search'
+Plug 'Nkr1shna/nlhelp.nvim'
 call plug#end()
 
 " Configuration
@@ -387,7 +387,7 @@ tail -f logs/plugin.log
 
 ```bash
 # Clone the repository
-git clone https://github.com/nest/nvim-smart-keybind-search.git
+git clone https://github.com/Nkr1shna/nlhelp.nvim.git
 cd nvim-smart-keybind-search
 
 # Install dependencies
@@ -463,6 +463,6 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/nest/nvim-smart-keybind-search/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/nest/nvim-smart-keybind-search/discussions)
-- **Documentation**: [Wiki](https://github.com/nest/nvim-smart-keybind-search/wiki)
+- **Issues**: [GitHub Issues](https://github.com/Nkr1shna/nlhelp.nvim/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/Nkr1shna/nlhelp.nvim/discussions)
+- **Documentation**: [Wiki](https://github.com/Nkr1shna/nlhelp.nvim/wiki)
