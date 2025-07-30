@@ -148,8 +148,9 @@ function M.setup(opts)
 	-- Initialize keybinding scanner if auto-sync is enabled
 	if M._config.auto_sync then
 		keybind_scanner.setup(M._config.scanner)
-		-- Perform initial sync
-		M.sync_keybindings()
+
+		-- Start background database population
+		M._populate_database_background()
 
 		-- Set up change detection if enabled
 		if M._config.watch_changes then
@@ -447,6 +448,88 @@ function M.get_scanner_stats()
 	end
 
 	return keybind_scanner.get_stats()
+end
+
+--- Populate database in background during setup
+function M._populate_database_background()
+	vim.notify("nvim-smart-keybind-search: Initializing database in background...", vim.log.levels.INFO)
+
+	-- Run database population asynchronously
+	vim.schedule(function()
+		local data_dir = vim.fn.stdpath("data") .. "/nvim-smart-keybind-search"
+
+		-- Ensure data directory exists
+		vim.fn.mkdir(data_dir, "p")
+		vim.fn.mkdir(data_dir .. "/chroma", "p")
+		vim.fn.mkdir(data_dir .. "/logs", "p")
+
+		-- Get project root directory
+		local script_dir = vim.fn.fnamemodify(debug.getinfo(1).source:sub(2), ":h:h:h")
+
+		-- Build the Go server first
+		local build_cmd = string.format("cd %s && go build -ldflags='-s -w' -o server cmd/server/main.go", script_dir)
+		vim.fn.system(build_cmd)
+
+		-- Population steps
+		local steps = {
+			{
+				name = "Built-in knowledge (Neovim quick reference)",
+				cmd = string.format("cd %s && go run scripts/populate_builtin_knowledge.go", script_dir),
+			},
+			{
+				name = "General knowledge (HuggingFace dataset)",
+				cmd = string.format("cd %s && go run scripts/populate_general_knowledge.go", script_dir),
+			},
+			{
+				name = "User keybindings",
+				func = function()
+					return keybind_scanner.populate_user_keybindings(data_dir)
+				end,
+			},
+		}
+
+		local completed_steps = 0
+		local total_steps = #steps
+
+		for i, step in ipairs(steps) do
+			vim.notify(string.format("Populating %s... (%d/%d)", step.name, i, total_steps), vim.log.levels.INFO)
+
+			local success = false
+			if step.cmd then
+				local result = vim.fn.system(step.cmd)
+				success = vim.v.shell_error == 0
+				if not success then
+					vim.notify(string.format("Failed to populate %s: %s", step.name, result), vim.log.levels.WARN)
+				end
+			elseif step.func then
+				success = step.func()
+			end
+
+			if success then
+				completed_steps = completed_steps + 1
+			end
+		end
+
+		-- Final notification
+		if completed_steps == total_steps then
+			vim.notify(
+				"🎉 nvim-smart-keybind-search is ready! Use <leader>ks to start searching.",
+				vim.log.levels.INFO
+			)
+		else
+			vim.notify(
+				string.format(
+					"Database initialization completed with %d/%d steps successful. Plugin is ready to use.",
+					completed_steps,
+					total_steps
+				),
+				vim.log.levels.WARN
+			)
+		end
+
+		-- Perform initial keybinding sync after database is ready
+		M.sync_keybindings()
+	end)
 end
 
 return M

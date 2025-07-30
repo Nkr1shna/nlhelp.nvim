@@ -99,9 +99,14 @@ Prerequisites:
 
 4. Setup backend:
    >bash
-   ./scripts/install.sh  # Linux/macOS
-   # or
-   scripts\install.bat   # Windows
+   # Build the Go backend
+   go build -o server cmd/server/main.go
+   
+   # Build the database
+   go run scripts/build_database.go
+   
+   # Start the server
+   ./server
    <
 
 ==============================================================================

@@ -20,7 +20,7 @@ local picker_state = {
 -- Common query suggestions for auto-completion
 local common_queries = {
 	"delete word",
-	"delete line", 
+	"delete line",
 	"copy line",
 	"paste",
 	"save file",
@@ -67,13 +67,13 @@ local function format_result(result, config, ui_config)
 
 	-- Build display text with enhanced formatting
 	local display_parts = {}
-	
+
 	-- Add relevance indicator if enabled
 	if config.show_relevance and result.relevance then
 		local relevance_icon = result.relevance > 0.8 and "⭐" or result.relevance > 0.6 and "✨" or "•"
 		table.insert(display_parts, relevance_icon .. " ")
 	end
-	
+
 	table.insert(display_parts, icon .. keybinding.keys)
 
 	if keybinding.description and keybinding.description ~= "" then
@@ -112,22 +112,22 @@ local function show_loading_indicator(picker)
 	if picker_state.loading_timer then
 		vim.fn.timer_stop(picker_state.loading_timer)
 	end
-	
+
 	-- Show loading message in picker
 	if picker and picker.set_prompt then
 		picker:set_prompt("Searching... ")
 	end
-	
+
 	-- Set up loading animation
-	local dots = {".", "..", "..."}
+	local dots = { ".", "..", "..." }
 	local dot_index = 1
-	
+
 	picker_state.loading_timer = vim.fn.timer_start(500, function()
 		if picker and picker.set_prompt then
 			picker:set_prompt("Searching" .. dots[dot_index] .. " ")
 			dot_index = (dot_index % #dots) + 1
 		end
-	end, { repeat = -1 })
+	end, { ["repeat"] = -1 })
 end
 
 --- Hide loading indicator
@@ -137,7 +137,7 @@ local function hide_loading_indicator(picker)
 		vim.fn.timer_stop(picker_state.loading_timer)
 		picker_state.loading_timer = nil
 	end
-	
+
 	if picker and picker.set_prompt then
 		picker:set_prompt("Search keybindings: ")
 	end
@@ -150,21 +150,21 @@ local function get_query_suggestions(query)
 	if #query < 2 then
 		return {}
 	end
-	
+
 	local suggestions = {}
 	local lower_query = query:lower()
-	
+
 	for _, suggestion in ipairs(common_queries) do
 		if suggestion:lower():find(lower_query, 1, true) then
 			table.insert(suggestions, suggestion)
 		end
 	end
-	
+
 	-- Limit suggestions
 	if #suggestions > 5 then
 		suggestions = vim.list_slice(suggestions, 1, 5)
 	end
-	
+
 	return suggestions
 end
 
@@ -210,22 +210,11 @@ local function debounced_search(query, config, ui_config, callback, picker)
 			hide_loading_indicator(picker)
 
 			if error_msg then
-				-- Enhanced error display
-				local error_lines = {
-					"Search Error:",
-					error_msg,
-					"",
-					"Try:",
-					"- Check if backend is running",
-					"- Verify your query",
-					"- Check network connection"
-				}
-				
 				-- Show error in picker if possible
 				if picker and picker.set_prompt then
 					picker:set_prompt("Error - Press Esc to close")
 				end
-				
+
 				vim.notify("Search error: " .. error_msg, vim.log.levels.WARN)
 				callback({})
 				return
@@ -256,19 +245,12 @@ end
 --- Handle result selection with enhanced actions
 --- @param item table Selected item
 --- @param config table Picker configuration
---- @param picker table Snack picker instance
-local function handle_selection(item, config, picker)
+local function handle_selection(item, config)
 	if not item or not item.keybinding then
 		return
 	end
 
 	local keybinding = item.keybinding
-
-	-- Show action menu for complex keybindings
-	if config.show_action_menu and (keybinding.command and keybinding.command:match("^:") or keybinding.plugin) then
-		show_action_menu(item, config, picker)
-		return
-	end
 
 	-- Try to execute the keybinding
 	if keybinding.keys and keybinding.keys ~= "" then
@@ -294,123 +276,44 @@ local function handle_selection(item, config, picker)
 	end
 end
 
---- Show action menu for complex keybindings
---- @param item table Selected item
---- @param config table Picker configuration
---- @param picker table Snack picker instance
-local function show_action_menu(item, config, picker)
-	local keybinding = item.keybinding
-	local actions = {
-		{ text = "Execute", action = "execute" },
-		{ text = "Copy to clipboard", action = "copy" },
-		{ text = "Show details", action = "details" },
-		{ text = "Explain", action = "explain" },
-	}
-	
-	-- Create action picker
-	local snack_ok, snack = pcall(require, "snack")
-	if not snack_ok then
-		-- Fallback to simple execution
-		handle_selection(item, config, picker)
-		return
-	end
-	
-	local action_picker = snack.picker({
-		prompt = "Choose action for: " .. keybinding.keys,
-		source = {
-			name = "action_menu",
-			get = function(ctx, callback)
-				callback(actions)
-			end,
-			format = function(action)
-				return action.text
-			end,
-		},
-		win = {
-			width = 0.4,
-			height = 0.3,
-			border = "rounded",
-		},
-		actions = {
-			["<CR>"] = function(action_picker, action_item)
-				action_picker:close()
-				execute_action(action_item.action, item, config, picker)
-			end,
-			["<Esc>"] = function(action_picker)
-				action_picker:close()
-			end,
-		},
-	})
-	
-	action_picker:open()
-end
-
---- Execute selected action
---- @param action string Action to execute
---- @param item table Selected item
---- @param config table Picker configuration
---- @param picker table Snack picker instance
-local function execute_action(action, item, config, picker)
-	local keybinding = item.keybinding
-	
-	if action == "execute" then
-		handle_selection(item, config, picker)
-	elseif action == "copy" then
-		-- Copy keybinding to clipboard
-		vim.fn.setreg("+", keybinding.keys)
-		vim.notify("Copied '" .. keybinding.keys .. "' to clipboard", vim.log.levels.INFO)
-	elseif action == "details" then
-		-- Show detailed information
-		show_detailed_info(item, config)
-	elseif action == "explain" then
-		-- Show explanation
-		if item.explanation then
-			vim.notify("Explanation: " .. item.explanation, vim.log.levels.INFO)
-		else
-			vim.notify("No explanation available", vim.log.levels.WARN)
-		end
-	end
-end
-
 --- Show detailed information about a keybinding
 --- @param item table Selected item
---- @param config table Picker configuration
-local function show_detailed_info(item, config)
+local function show_detailed_info(item)
 	local keybinding = item.keybinding
 	local lines = {
 		"=== Keybinding Details ===",
 		"Keys: " .. (keybinding.keys or ""),
 		"Mode: " .. (keybinding.mode or "normal"),
 	}
-	
+
 	if keybinding.command and keybinding.command ~= "" then
 		table.insert(lines, "Command: " .. keybinding.command)
 	end
-	
+
 	if keybinding.description and keybinding.description ~= "" then
 		table.insert(lines, "Description: " .. keybinding.description)
 	end
-	
+
 	if keybinding.plugin and keybinding.plugin ~= "" then
 		table.insert(lines, "Plugin: " .. keybinding.plugin)
 	end
-	
+
 	if item.relevance then
 		table.insert(lines, "Relevance: " .. string.format("%.2f", item.relevance))
 	end
-	
+
 	if item.explanation and item.explanation ~= "" then
 		table.insert(lines, "")
 		table.insert(lines, "Explanation:")
 		table.insert(lines, item.explanation)
 	end
-	
+
 	-- Create a floating window to show details
 	local width = math.min(80, vim.o.columns - 4)
 	local height = math.min(20, #lines + 2)
 	local row = math.floor((vim.o.lines - height) / 2)
 	local col = math.floor((vim.o.columns - width) / 2)
-	
+
 	local buf = vim.api.nvim_create_buf(false, true)
 	local win = vim.api.nvim_open_win(buf, true, {
 		relative = "editor",
@@ -421,12 +324,12 @@ local function show_detailed_info(item, config)
 		style = "minimal",
 		border = "rounded",
 	})
-	
+
 	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
 	vim.api.nvim_buf_set_option(buf, "modifiable", false)
 	vim.api.nvim_buf_set_option(buf, "buftype", "nofile")
 	vim.api.nvim_buf_set_option(buf, "filetype", "text")
-	
+
 	-- Add close action
 	vim.keymap.set("n", "q", function()
 		vim.api.nvim_win_close(win, true)
@@ -434,7 +337,7 @@ local function show_detailed_info(item, config)
 	vim.keymap.set("n", "<Esc>", function()
 		vim.api.nvim_win_close(win, true)
 	end, { buffer = buf, noremap = true })
-	
+
 	vim.api.nvim_command("startinsert")
 end
 
@@ -446,12 +349,12 @@ end
 local function create_snack_source(config, ui_config, picker)
 	return {
 		name = "keybinding_search",
-		get = function(ctx, callback)
-			local query = ctx.query or ""
-			
+		get = function(_, callback)
+			local query = picker and picker.query or ""
+
 			-- Get query suggestions
 			picker_state.query_suggestions = get_query_suggestions(query)
-			
+
 			debounced_search(query, config, ui_config, callback, picker)
 		end,
 		format = function(item)
@@ -540,7 +443,7 @@ function M.open(initial_query, picker_config, ui_config)
 	-- Create enhanced picker configuration
 	local snack_picker_config = vim.tbl_deep_extend("force", {
 		prompt = "Search keybindings: ",
-		source = create_snack_source(picker_config, ui_config or {}),
+		source = create_snack_source(picker_config, ui_config or {}, nil),
 		win = {
 			width = picker_config.window.width or 0.8,
 			height = picker_config.window.height or 0.6,
@@ -551,7 +454,7 @@ function M.open(initial_query, picker_config, ui_config)
 		},
 		actions = {
 			["<CR>"] = function(picker, item)
-				handle_selection(item, picker_config, picker)
+				handle_selection(item, picker_config)
 				picker:close()
 			end,
 			["<C-c>"] = function(picker)
@@ -568,13 +471,13 @@ function M.open(initial_query, picker_config, ui_config)
 					picker:set_query(suggestions[1])
 				end
 			end,
-			["<C-d>"] = function(picker, item)
+			["<C-d>"] = function(_, item)
 				-- Show details without closing picker
 				if item then
-					show_detailed_info(item, picker_config)
+					show_detailed_info(item)
 				end
 			end,
-			["<C-y>"] = function(picker, item)
+			["<C-y>"] = function(_, item)
 				-- Copy keybinding to clipboard
 				if item and item.keybinding then
 					vim.fn.setreg("+", item.keybinding.keys)

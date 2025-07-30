@@ -41,7 +41,7 @@ help:
 	@echo "  release     - Create release package"
 
 # Installation
-install: build
+install: 
 	@echo "Installing nvim-smart-keybind-search..."
 	@chmod +x scripts/install.sh
 	@./scripts/install.sh
@@ -110,9 +110,24 @@ health:
 # Database management
 db-build: build-database
 
+populate-builtin:
+	@echo "Populating built-in knowledge from Neovim quick reference..."
+	@go run scripts/populate_builtin_knowledge.go
+
+populate-general:
+	@echo "Populating general knowledge from HuggingFace dataset..."
+	@go run scripts/populate_general_knowledge.go
+
+populate-user:
+	@echo "User keybindings are populated automatically by the plugin."
+	@echo "Run :SmartKeybindSync in Neovim to manually sync user keybindings."
+
+populate-all: populate-builtin populate-general
+	@echo "All knowledge bases populated successfully!"
+
 db-clean:
 	@echo "Cleaning database files..."
-	@rm -rf data/chroma/*
+	@rm -rf ~/.local/share/nvim-smart-keybind-search/chroma/*
 	@echo "Database cleaned."
 
 db-backup:
@@ -208,14 +223,9 @@ install-linux: install
 install-macos: install
 	@echo "macOS installation complete."
 
-install-windows:
-	@echo "Installing on Windows..."
-	@if [ -f "scripts/install.bat" ]; then \
-		scripts/install.bat; \
-	else \
-		echo "Windows installation script not found."; \
-		exit 1; \
-	fi
+install-windows: install
+	@echo "Windows installation complete."
+	@echo "The Go backend automatically handles all dependencies."
 
 # Service management
 install-service:

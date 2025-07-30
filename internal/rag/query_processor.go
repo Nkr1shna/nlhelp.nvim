@@ -494,23 +494,28 @@ func (qp *QueryProcessor) buildEnhancedContext(query string, results []interface
 		}
 	}
 
-	// Group results by relevance and source
-	userResults := []interfaces.VectorSearchResult{}
-	builtinResults := []interfaces.VectorSearchResult{}
+	// Group results by type and source
+	userKeybindings := []interfaces.VectorSearchResult{}
+	builtinKeybindings := []interfaces.VectorSearchResult{}
+	generalKnowledge := []interfaces.VectorSearchResult{}
 
 	for _, result := range results {
+		docType := getMetadataString(result.Document, "type")
 		source := getMetadataString(result.Document, "source")
-		if source == "user" {
-			userResults = append(userResults, result)
+
+		if docType == "general_knowledge" {
+			generalKnowledge = append(generalKnowledge, result)
+		} else if source == "user" {
+			userKeybindings = append(userKeybindings, result)
 		} else {
-			builtinResults = append(builtinResults, result)
+			builtinKeybindings = append(builtinKeybindings, result)
 		}
 	}
 
-	// Add user keybindings first (higher priority)
-	if len(userResults) > 0 {
+	// Add user keybindings first (highest priority)
+	if len(userKeybindings) > 0 {
 		contextParts = append(contextParts, "\n\nUser-configured keybindings:")
-		for i, result := range userResults {
+		for i, result := range userKeybindings {
 			if i >= 5 { // Limit user results
 				break
 			}
@@ -519,18 +524,31 @@ func (qp *QueryProcessor) buildEnhancedContext(query string, results []interface
 	}
 
 	// Add built-in keybindings
-	if len(builtinResults) > 0 {
+	if len(builtinKeybindings) > 0 {
 		contextParts = append(contextParts, "\n\nBuilt-in vim keybindings:")
 		maxBuiltin := 5
-		if len(userResults) == 0 {
+		if len(userKeybindings) == 0 {
 			maxBuiltin = 8 // More built-in results if no user results
 		}
 
-		for i, result := range builtinResults {
+		for i, result := range builtinKeybindings {
 			if i >= maxBuiltin {
 				break
 			}
 			contextParts = append(contextParts, qp.formatResultForContext(result, i+1))
+		}
+	}
+
+	// Add general knowledge
+	if len(generalKnowledge) > 0 {
+		contextParts = append(contextParts, "\n\nGeneral knowledge and concepts:")
+		maxGeneral := 3 // Limit general knowledge to avoid overwhelming context
+
+		for i, result := range generalKnowledge {
+			if i >= maxGeneral {
+				break
+			}
+			contextParts = append(contextParts, qp.formatGeneralKnowledgeForContext(result, i+1))
 		}
 	}
 
@@ -551,18 +569,42 @@ func (qp *QueryProcessor) formatResultForContext(result interfaces.VectorSearchR
 	description := getMetadataString(result.Document, "description")
 	mode := getMetadataString(result.Document, "mode")
 
-	contextPart := fmt.Sprintf("\n%d. Keys: %s", index, keys)
-
+	contextPart := fmt.Sprintf("\n%d. %s", index, keys)
 	if command != "" {
-		contextPart += fmt.Sprintf(", Command: %s", command)
+		contextPart += fmt.Sprintf(" (%s)", command)
 	}
-
 	if description != "" {
-		contextPart += fmt.Sprintf(", Description: %s", description)
+		contextPart += fmt.Sprintf(": %s", description)
+	}
+	if mode != "" && mode != "n" {
+		contextPart += fmt.Sprintf(" [%s mode]", mode)
 	}
 
-	if mode != "" && mode != "normal" {
-		contextPart += fmt.Sprintf(", Mode: %s", mode)
+	contextPart += fmt.Sprintf(", Relevance: %.2f", result.Score)
+
+	return contextPart
+}
+
+// formatGeneralKnowledgeForContext formats a general knowledge result for context inclusion
+func (qp *QueryProcessor) formatGeneralKnowledgeForContext(result interfaces.VectorSearchResult, index int) string {
+	title := getMetadataString(result.Document, "title")
+	content := getMetadataString(result.Document, "content")
+	category := getMetadataString(result.Document, "category")
+	difficulty := getMetadataString(result.Document, "difficulty")
+
+	contextPart := fmt.Sprintf("\n%d. %s", index, title)
+	if content != "" {
+		// Truncate content if too long
+		if len(content) > 200 {
+			content = content[:200] + "..."
+		}
+		contextPart += fmt.Sprintf(": %s", content)
+	}
+	if category != "" {
+		contextPart += fmt.Sprintf(" [%s]", category)
+	}
+	if difficulty != "" {
+		contextPart += fmt.Sprintf(" (%s level)", difficulty)
 	}
 
 	contextPart += fmt.Sprintf(", Relevance: %.2f", result.Score)

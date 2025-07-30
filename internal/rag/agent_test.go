@@ -3,6 +3,7 @@ package rag
 import (
 	"testing"
 
+	"nvim-smart-keybind-search/internal/chromadb"
 	"nvim-smart-keybind-search/internal/interfaces"
 
 	chroma "github.com/amikos-tech/chroma-go/pkg/api/v2"
@@ -101,7 +102,15 @@ func TestNewAgent(t *testing.T) {
 	mockVectorDB := &MockVectorDB{}
 	mockLLMClient := &MockLLMClient{}
 
-	agent := NewAgent(mockVectorDB, mockLLMClient, nil)
+	// Create a real ChromaDB client with default config for testing
+	chromaClient, err := chromadb.NewClient(chromadb.DefaultConfig())
+	if err != nil {
+		t.Skipf("Skipping test due to ChromaDB client creation error: %v", err)
+	}
+
+	mockCollectionManager := chromadb.NewCollectionManager(chromaClient)
+
+	agent := NewAgent(mockVectorDB, mockCollectionManager, mockLLMClient, nil)
 
 	if agent == nil {
 		t.Fatal("Expected agent to be created, got nil")
@@ -132,11 +141,19 @@ func TestAgentInitialize(t *testing.T) {
 	mockVectorDB := &MockVectorDB{}
 	mockLLMClient := &MockLLMClient{}
 
-	agent := NewAgent(mockVectorDB, mockLLMClient, nil)
-
-	err := agent.Initialize()
+	// Create a real ChromaDB client with default config for testing
+	chromaClient, err := chromadb.NewClient(chromadb.DefaultConfig())
 	if err != nil {
-		t.Fatalf("Expected initialization to succeed, got error: %v", err)
+		t.Skipf("Skipping test due to ChromaDB client creation error: %v", err)
+	}
+
+	mockCollectionManager := chromadb.NewCollectionManager(chromaClient)
+
+	agent := NewAgent(mockVectorDB, mockCollectionManager, mockLLMClient, nil)
+
+	initErr := agent.Initialize()
+	if initErr != nil {
+		t.Fatalf("Expected initialization to succeed, got error: %v", initErr)
 	}
 }
 
@@ -144,7 +161,15 @@ func TestAgentProcessQueryEmptyQuery(t *testing.T) {
 	mockVectorDB := &MockVectorDB{}
 	mockLLMClient := &MockLLMClient{}
 
-	agent := NewAgent(mockVectorDB, mockLLMClient, nil)
+	// Create a real ChromaDB client with default config for testing
+	chromaClient, err := chromadb.NewClient(chromadb.DefaultConfig())
+	if err != nil {
+		t.Skipf("Skipping test due to ChromaDB client creation error: %v", err)
+	}
+
+	mockCollectionManager := chromadb.NewCollectionManager(chromaClient)
+
+	agent := NewAgent(mockVectorDB, mockCollectionManager, mockLLMClient, nil)
 
 	result, err := agent.ProcessQuery("")
 	if err != nil {
@@ -207,7 +232,15 @@ You could also use D to delete from cursor to end of line.`,
 		generateResponse: mockLLMResponse,
 	}
 
-	agent := NewAgent(mockVectorDB, mockLLMClient, nil)
+	// Create a real ChromaDB client with default config for testing
+	chromaClient, err := chromadb.NewClient(chromadb.DefaultConfig())
+	if err != nil {
+		t.Skipf("Skipping test due to ChromaDB client creation error: %v", err)
+	}
+
+	mockCollectionManager := chromadb.NewCollectionManager(chromaClient)
+
+	agent := NewAgent(mockVectorDB, mockCollectionManager, mockLLMClient, nil)
 
 	result, err := agent.ProcessQuery("delete line")
 	if err != nil {
@@ -246,11 +279,19 @@ func TestAgentHealthCheck(t *testing.T) {
 	mockVectorDB := &MockVectorDB{}
 	mockLLMClient := &MockLLMClient{}
 
-	agent := NewAgent(mockVectorDB, mockLLMClient, nil)
-
-	err := agent.HealthCheck()
+	// Create a real ChromaDB client with default config for testing
+	chromaClient, err := chromadb.NewClient(chromadb.DefaultConfig())
 	if err != nil {
-		t.Fatalf("Expected health check to pass, got error: %v", err)
+		t.Skipf("Skipping test due to ChromaDB client creation error: %v", err)
+	}
+
+	mockCollectionManager := chromadb.NewCollectionManager(chromaClient)
+
+	agent := NewAgent(mockVectorDB, mockCollectionManager, mockLLMClient, nil)
+
+	healthErr := agent.HealthCheck()
+	if healthErr != nil {
+		t.Fatalf("Expected health check to pass, got error: %v", healthErr)
 	}
 }
 
@@ -258,7 +299,15 @@ func TestAgentGetStats(t *testing.T) {
 	mockVectorDB := &MockVectorDB{}
 	mockLLMClient := &MockLLMClient{}
 
-	agent := NewAgent(mockVectorDB, mockLLMClient, nil)
+	// Create a real ChromaDB client with default config for testing
+	chromaClient, err := chromadb.NewClient(chromadb.DefaultConfig())
+	if err != nil {
+		t.Skipf("Skipping test due to ChromaDB client creation error: %v", err)
+	}
+
+	mockCollectionManager := chromadb.NewCollectionManager(chromaClient)
+
+	agent := NewAgent(mockVectorDB, mockCollectionManager, mockLLMClient, nil)
 
 	stats := agent.GetStats()
 	if stats == nil {
@@ -285,7 +334,15 @@ func TestAgentUpdateVectorDB(t *testing.T) {
 	mockVectorDB := &MockVectorDB{}
 	mockLLMClient := &MockLLMClient{}
 
-	agent := NewAgent(mockVectorDB, mockLLMClient, nil)
+	// Create a real ChromaDB client with default config for testing
+	chromaClient, err := chromadb.NewClient(chromadb.DefaultConfig())
+	if err != nil {
+		t.Skipf("Skipping test due to ChromaDB client creation error: %v", err)
+	}
+
+	mockCollectionManager := chromadb.NewCollectionManager(chromaClient)
+
+	agent := NewAgent(mockVectorDB, mockCollectionManager, mockLLMClient, nil)
 
 	keybindings := []interfaces.Keybinding{
 		{
@@ -297,9 +354,9 @@ func TestAgentUpdateVectorDB(t *testing.T) {
 		},
 	}
 
-	err := agent.UpdateVectorDB(keybindings)
-	if err != nil {
-		t.Fatalf("Expected UpdateVectorDB to succeed, got error: %v", err)
+	updateErr := agent.UpdateVectorDB(keybindings)
+	if updateErr != nil {
+		t.Fatalf("Expected UpdateVectorDB to succeed, got error: %v", updateErr)
 	}
 }
 
@@ -310,7 +367,14 @@ func TestAgentFilterBySimilarity(t *testing.T) {
 	config := DefaultAgentConfig()
 	config.SimilarityThreshold = 0.5
 
-	agent := NewAgent(mockVectorDB, mockLLMClient, config)
+	// Create a real ChromaDB client with default config for testing
+	chromaClient, err := chromadb.NewClient(chromadb.DefaultConfig())
+	if err != nil {
+		t.Skipf("Skipping test due to ChromaDB client creation error: %v", err)
+	}
+
+	mockCollectionManager := chromadb.NewCollectionManager(chromaClient)
+	agent := NewAgent(mockVectorDB, mockCollectionManager, mockLLMClient, config)
 
 	results := []interfaces.VectorSearchResult{
 		{Score: 0.9}, // Should be included

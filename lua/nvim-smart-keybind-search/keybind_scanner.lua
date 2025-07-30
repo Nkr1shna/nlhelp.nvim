@@ -353,4 +353,80 @@ function M.deserialize_keybindings(json_string)
 	return keybindings or {}
 end
 
+--- Export keybindings to JSON file for Go backend processing
+--- @param filename string Output filename
+--- @param keybindings table|nil Optional keybindings list (uses cached if nil)
+--- @return boolean Success status
+function M.export_to_file(filename, keybindings)
+	local kb_list = keybindings or scanner_state.keybinding_cache or {}
+
+	if #kb_list == 0 then
+		-- Perform a scan if no keybindings available
+		kb_list = M.scan_all()
+	end
+
+	-- Convert to format expected by Go script
+	local go_format = {}
+	for _, kb in ipairs(kb_list) do
+		local go_kb = {
+			id = kb.id,
+			keys = kb.keys,
+			command = kb.command,
+			description = kb.description,
+			mode = kb.mode,
+			plugin = kb.plugin or "",
+			buffer = 0, -- Default buffer
+			silent = kb.metadata and kb.metadata.silent == "true" or false,
+			noremap = kb.metadata and kb.metadata.noremap == "true" or false,
+			expr = kb.metadata and kb.metadata.expr == "true" or false,
+			metadata = kb.metadata or {},
+		}
+		table.insert(go_format, go_kb)
+	end
+
+	-- Write to file
+	local json_content = vim.json.encode(go_format)
+	local file = io.open(filename, "w")
+	if not file then
+		return false
+	end
+
+	file:write(json_content)
+	file:close()
+
+	return true
+end
+
+--- Populate user keybindings in ChromaDB using Go script
+--- @param data_dir string Data directory path
+--- @return boolean Success status
+function M.populate_user_keybindings(data_dir)
+	local temp_file = data_dir .. "/temp_user_keybindings.json"
+
+	-- Export current keybindings to temporary file
+	if not M.export_to_file(temp_file) then
+		vim.notify("Failed to export user keybindings", vim.log.levels.ERROR)
+		return false
+	end
+
+	-- Run Go script to populate ChromaDB
+	local script_path = vim.fn.fnamemodify(debug.getinfo(1).source:sub(2), ":h:h:h")
+		.. "/scripts/populate_user_keybindings.go"
+	local cmd = string.format("go run %s %s", script_path, temp_file)
+
+	local result = vim.fn.system(cmd)
+	local exit_code = vim.v.shell_error
+
+	-- Clean up temporary file
+	os.remove(temp_file)
+
+	if exit_code == 0 then
+		vim.notify("User keybindings populated successfully", vim.log.levels.INFO)
+		return true
+	else
+		vim.notify("Failed to populate user keybindings: " .. result, vim.log.levels.ERROR)
+		return false
+	end
+end
+
 return M

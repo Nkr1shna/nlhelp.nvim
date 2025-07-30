@@ -1,0 +1,86 @@
+[
+    {
+        "id": "vim_modes_explained",
+        "title": "Understanding Vim Modes",
+        "content": "Vim operates in different modes, each serving a specific purpose. Normal mode is the default state for navigation and commands. Insert mode allows text input. Visual mode enables text selection. Command mode executes commands. Understanding these modes is fundamental to efficient Vim usage.",
+        "category": "vim_concepts",
+        "tags": [
+            "modes",
+            "basics",
+            "fundamentals",
+            "navigation"
+        ],
+        "source": "vim_documentation",
+        "difficulty": "beginner",
+        "examples": [
+            "Press 'i' to enter insert mode",
+            "Press 'v' to enter visual mode",
+            "Press ':' to enter command mode"
+        ],
+        "related": [
+            "vim_philosophy",
+            "text_objects",
+            "navigation"
+        ],
+        "metadata": {
+            "url": "https://vimhelp.org/modes.html",
+            "last_updated": "2024-01-15"
+        }
+    },
+    {
+        "id": "vim_plugins_best_practices",
+        "title": "Vim Plugin Best Practices",
+        "content": "When choosing Vim plugins, focus on functionality that enhances your workflow without adding bloat. Use a plugin manager like Vim-Plug or Pathogen. Regularly review and remove unused plugins. Consider performance impact and compatibility with your Vim version.",
+        "category": "plugins",
+        "tags": [
+            "plugins",
+            "best_practices",
+            "performance",
+            "workflow"
+        ],
+        "source": "vim_community",
+        "difficulty": "intermediate",
+        "examples": [
+            "Use Vim-Plug for plugin management",
+            "Review plugins quarterly",
+            "Test plugins in isolation"
+        ],
+        "related": [
+            "vim_configuration",
+            "performance_tuning"
+        ],
+        "metadata": {
+            "url": "https://github.com/junegunn/vim-plug",
+            "last_updated": "2024-01-20"
+        }
+    },
+    {
+        "id": "vim_macros_advanced",
+        "title": "Advanced Vim Macros",
+        "content": "Vim macros can be incredibly powerful for repetitive tasks. Record macros with 'q' followed by a register letter. Play them with '@' followed by the register. Use numbered registers for complex sequences. Macros can include any Vim command and can be edited before replaying.",
+        "category": "advanced_features",
+        "tags": [
+            "macros",
+            "automation",
+            "efficiency",
+            "advanced"
+        ],
+        "source": "vim_documentation",
+        "difficulty": "advanced",
+        "examples": [
+            "qa - start recording macro 'a'",
+            "@a - replay macro 'a'",
+            "10@a - replay macro 10 times",
+            ":let @a='...' - edit macro 'a'"
+        ],
+        "related": [
+            "vim_marks",
+            "text_objects",
+            "automation"
+        ],
+        "metadata": {
+            "url": "https://vimhelp.org/map.html",
+            "last_updated": "2024-01-25"
+        }
+    }
+]

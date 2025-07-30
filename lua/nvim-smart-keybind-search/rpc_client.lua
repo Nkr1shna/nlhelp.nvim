@@ -40,19 +40,6 @@ local function create_request(method, params)
 	}
 end
 
---- Create JSON-RPC error response
---- @param code number Error code
---- @param message string Error message
---- @param data any Optional error data
---- @return table JSON-RPC error
-local function create_error(code, message, data)
-	return {
-		code = code,
-		message = message,
-		data = data,
-	}
-end
-
 --- Log debug message
 --- @param message string Message to log
 local function log_debug(message)
@@ -155,28 +142,7 @@ local function handle_exit(job_id, exit_code)
 	end
 	client_state.pending_requests = {}
 
-	-- Attempt reconnection if configured
-	if client_state.config and client_state.config.backend.auto_start then
-		schedule_reconnect()
-	end
-end
-
---- Schedule reconnection attempt
-local function schedule_reconnect()
-	if client_state.reconnect_attempts >= client_state.max_reconnect_attempts then
-		log_error("Max reconnection attempts reached, giving up")
-		return
-	end
-
-	client_state.reconnect_attempts = client_state.reconnect_attempts + 1
-	local delay = client_state.reconnect_delay * client_state.reconnect_attempts
-
-	log_debug("Scheduling reconnection attempt " .. client_state.reconnect_attempts .. " in " .. delay .. "ms")
-
-	client_state.reconnect_timer = vim.fn.timer_start(delay, function()
-		client_state.reconnect_timer = nil
-		connect_backend()
-	end)
+	-- Note: Reconnection logic removed for simplicity
 end
 
 --- Start the Go backend process
@@ -219,7 +185,7 @@ end
 
 --- Connect to backend (start if needed)
 --- @return boolean Success
-function connect_backend()
+local function connect_backend()
 	if client_state.is_connected then
 		return true
 	end
@@ -231,7 +197,7 @@ end
 --- @param method string RPC method name
 --- @param params any Method parameters
 --- @param callback function Callback function(result, error)
---- @param timeout number Optional timeout in milliseconds
+--- @param timeout? number Optional timeout in milliseconds
 local function send_request(method, params, callback, timeout)
 	-- Queue request if not connected
 	if not client_state.is_connected then

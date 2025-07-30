@@ -199,11 +199,6 @@ func (c *Client) SearchInCollection(query string, limit int, collectionName stri
 	return c.convertQueryResults(&results), nil
 }
 
-// convertStringToDocumentID converts a string to DocumentID
-func convertStringToDocumentID(id string) chroma.DocumentID {
-	return chroma.DocumentID(id)
-}
-
 // convertStringsToDocumentIDs converts []string to []DocumentID
 func convertStringsToDocumentIDs(ids []string) []chroma.DocumentID {
 	result := make([]chroma.DocumentID, len(ids))
@@ -211,25 +206,6 @@ func convertStringsToDocumentIDs(ids []string) []chroma.DocumentID {
 		result[i] = chroma.DocumentID(id)
 	}
 	return result
-}
-
-// convertDocumentIDToString converts DocumentID to string
-func convertDocumentIDToString(id chroma.DocumentID) string {
-	return string(id)
-}
-
-// convertDocumentIDsToStrings converts []DocumentID to []string
-func convertDocumentIDsToStrings(ids []chroma.DocumentID) []string {
-	result := make([]string, len(ids))
-	for i, id := range ids {
-		result[i] = string(id)
-	}
-	return result
-}
-
-// convertMapToDocumentMetadata converts map[string]interface{} to DocumentMetadata
-func convertMapToDocumentMetadata(metadata map[string]interface{}) (chroma.DocumentMetadata, error) {
-	return chroma.NewDocumentMetadataFromMap(metadata)
 }
 
 // convertQueryResults converts ChromaDB query results to our interface format

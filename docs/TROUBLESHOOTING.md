@@ -68,22 +68,12 @@ chroma run --path ./data/chroma --host localhost --port 8000 &
 
 #### Solutions
 
-**Install Ollama:**
-```bash
-# macOS/Linux
-curl -fsSL https://ollama.ai/install.sh | sh
-
-# Windows
-# Download from https://ollama.ai
-```
+**Note:** Ollama is automatically installed and managed by the Go backend. No manual installation is required.
 
 **Start Ollama:**
 ```bash
-# Start Ollama daemon
-ollama serve
-
-# In another terminal, pull a model
-ollama pull llama3.2:3b
+# The Go backend automatically starts Ollama when needed
+# No manual intervention required
 ```
 
 **Check Ollama status:**
@@ -105,14 +95,12 @@ ollama list
 
 #### Solutions
 
-**Install ChromaDB:**
-```bash
-pip install chromadb==0.4.22
-```
+**Note:** ChromaDB is automatically installed and managed by the Go backend. No manual installation is required.
 
 **Start ChromaDB:**
 ```bash
-chroma run --path ./data/chroma --host localhost --port 8000
+# The Go backend automatically starts ChromaDB when needed
+# No manual intervention required
 ```
 
 **Rebuild database:**
@@ -511,8 +499,9 @@ rm -rf logs/
 rm -f server
 rm -f config.json
 
-# Reinstall
-./scripts/install.sh
+# Rebuild
+go build -o server cmd/server/main.go
+go run scripts/build_database.go
 
 # Start fresh
 ./start_server.sh

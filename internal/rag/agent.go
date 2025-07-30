@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"nvim-smart-keybind-search/internal/chromadb"
 	"nvim-smart-keybind-search/internal/interfaces"
 
 	chroma "github.com/amikos-tech/chroma-go/pkg/api/v2"
@@ -16,6 +17,7 @@ import (
 // Agent implements the RAGAgent interface for keybinding search
 type Agent struct {
 	vectorDB          interfaces.VectorDB
+	collectionManager *chromadb.CollectionManager
 	llmClient         interfaces.LLMClient
 	queryProcessor    *QueryProcessor
 	responseGenerator *ResponseGenerator
@@ -25,40 +27,43 @@ type Agent struct {
 
 // AgentConfig holds configuration for the RAG agent
 type AgentConfig struct {
-	MaxSearchResults    int
-	SimilarityThreshold float64
-	ContextWindowSize   int
-	MaxResponseTokens   int
-	Temperature         float64
-	QueryExpansion      bool
-	UserBoostFactor     float64
-	ResponseTimeout     time.Duration
+	MaxSearchResults     int
+	SimilarityThreshold  float64
+	ContextWindowSize    int
+	MaxResponseTokens    int
+	Temperature          float64
+	QueryExpansion       bool
+	UserBoostFactor      float64
+	ResponseTimeout      time.Duration
+	SearchAllCollections bool // Whether to search all collections or just keybindings
 }
 
 // DefaultAgentConfig returns default configuration for the RAG agent
 func DefaultAgentConfig() *AgentConfig {
 	return &AgentConfig{
-		MaxSearchResults:    10,
-		SimilarityThreshold: 0.3,
-		ContextWindowSize:   2000,
-		MaxResponseTokens:   500,
-		Temperature:         0.1, // Low temperature for consistent results
-		QueryExpansion:      true,
-		UserBoostFactor:     0.2, // Boost user keybindings by 20%
-		ResponseTimeout:     30 * time.Second,
+		MaxSearchResults:     10,
+		SimilarityThreshold:  0.3,
+		ContextWindowSize:    2000,
+		MaxResponseTokens:    500,
+		Temperature:          0.1, // Low temperature for consistent results
+		QueryExpansion:       true,
+		UserBoostFactor:      0.2, // Boost user keybindings by 20%
+		ResponseTimeout:      30 * time.Second,
+		SearchAllCollections: true, // Default to searching all collections
 	}
 }
 
 // NewAgent creates a new RAG agent
-func NewAgent(vectorDB interfaces.VectorDB, llmClient interfaces.LLMClient, config *AgentConfig) *Agent {
+func NewAgent(vectorDB interfaces.VectorDB, collectionManager *chromadb.CollectionManager, llmClient interfaces.LLMClient, config *AgentConfig) *Agent {
 	if config == nil {
 		config = DefaultAgentConfig()
 	}
 
 	agent := &Agent{
-		vectorDB:  vectorDB,
-		llmClient: llmClient,
-		config:    config,
+		vectorDB:          vectorDB,
+		collectionManager: collectionManager,
+		llmClient:         llmClient,
+		config:            config,
 	}
 
 	// Initialize query processor
@@ -80,6 +85,10 @@ func (a *Agent) Initialize() error {
 		return fmt.Errorf("vector database is required")
 	}
 
+	if a.collectionManager == nil {
+		return fmt.Errorf("collection manager is required")
+	}
+
 	if a.llmClient == nil {
 		return fmt.Errorf("LLM client is required")
 	}
@@ -87,6 +96,11 @@ func (a *Agent) Initialize() error {
 	// Initialize vector database
 	if err := a.vectorDB.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize vector database: %w", err)
+	}
+
+	// Initialize collection manager
+	if err := a.collectionManager.Initialize(); err != nil {
+		return fmt.Errorf("failed to initialize collection manager: %w", err)
 	}
 
 	// Initialize LLM client
@@ -126,12 +140,24 @@ func (a *Agent) ProcessQuery(query string) (*interfaces.QueryResult, error) {
 	}
 
 	// Step 2: Perform vector search with processed query
-	searchResults, err := a.vectorDB.Search(processedQuery.Expanded, a.config.MaxSearchResults)
-	if err != nil {
+	var searchResults []interfaces.VectorSearchResult
+	var searchErr error
+
+	if a.config.SearchAllCollections {
+		// Search all collections including general knowledge
+		searchResults, searchErr = a.collectionManager.SearchAllCollections(processedQuery.Expanded, a.config.MaxSearchResults)
+		log.Printf("Searching all collections (including general knowledge)")
+	} else {
+		// Search only keybinding collections
+		searchResults, searchErr = a.collectionManager.SearchBoth(processedQuery.Expanded, a.config.MaxSearchResults)
+		log.Printf("Searching keybinding collections only")
+	}
+
+	if searchErr != nil {
 		return &interfaces.QueryResult{
 			Results:   []interfaces.SearchResult{},
 			Reasoning: "Vector search failed",
-			Error:     fmt.Sprintf("Failed to search vector database: %v", err),
+			Error:     fmt.Sprintf("Failed to search vector database: %v", searchErr),
 		}, nil
 	}
 
@@ -144,7 +170,7 @@ func (a *Agent) ProcessQuery(query string) (*interfaces.QueryResult, error) {
 	if len(filteredResults) == 0 {
 		return &interfaces.QueryResult{
 			Results:   []interfaces.SearchResult{},
-			Reasoning: "No keybindings found matching the query criteria",
+			Reasoning: "No results found matching the query criteria",
 			Error:     "",
 		}, nil
 	}

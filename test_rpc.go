@@ -41,12 +41,12 @@ func main() {
 	}
 
 	llmClient := ollama.NewClient("")
-	if err != nil {
-		log.Fatalf("Failed to create Ollama client: %v", err)
-	}
+
+	// Create collection manager
+	collectionManager := chromadb.NewCollectionManager(vectorDB)
 
 	// Create RAG agent
-	ragAgent := rag.NewAgent(vectorDB, llmClient, rag.DefaultAgentConfig())
+	ragAgent := rag.NewAgent(vectorDB, collectionManager, llmClient, rag.DefaultAgentConfig())
 
 	// Create service with actual dependencies
 	service := server.NewRPCService(ragAgent, vectorDB, llmClient)

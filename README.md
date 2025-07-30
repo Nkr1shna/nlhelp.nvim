@@ -81,15 +81,9 @@ lua require("nvim-smart-keybind-search").setup({
 
 #### 2. Setup Backend
 
-**Automatic Setup (Recommended):**
-```bash
-# Run the installation script
-./scripts/install.sh  # Linux/macOS
-# or
-scripts\install.bat   # Windows
-```
+The Go backend automatically handles all dependencies including Ollama, ChromaDB, and Python. No manual installation is required.
 
-**Manual Setup:**
+**Build and Start:**
 ```bash
 # Build the Go backend
 go build -o server cmd/server/main.go
@@ -187,9 +181,7 @@ go test ./...
 ├── lua/
 │   └── nvim-smart-keybind-search/  # Lua plugin code
 ├── scripts/
-│   ├── build_database.go # Database initialization
-│   ├── install.sh       # Installation script (Linux/macOS)
-│   └── install.bat      # Installation script (Windows)
+│   └── build_database.go # Database initialization
 └── plugin/
     └── nvim-smart-keybind-search.vim  # Vim plugin file
 ```

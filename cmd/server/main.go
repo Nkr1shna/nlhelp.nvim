@@ -1,10 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
-	"io"
 	"log"
-	"net/http"
 	"os"
 
 	"nvim-smart-keybind-search/internal/chromadb"
@@ -43,10 +42,10 @@ func main() {
 		log.Fatalf("Failed to create ChromaDB client: %v", err)
 	}
 
+	// Create collection manager
+	collectionManager := chromadb.NewCollectionManager(vectorDB)
+
 	llmClient := ollama.NewClient("")
-	if err != nil {
-		log.Fatalf("Failed to create Ollama client: %v", err)
-	}
 
 	// Initialize the clients (this will auto-install and start services if needed)
 	log.Println("Initializing ChromaDB...")
@@ -54,43 +53,43 @@ func main() {
 		log.Fatalf("Failed to initialize ChromaDB: %v", err)
 	}
 
+	log.Println("Initializing Collection Manager...")
+	if err := collectionManager.Initialize(); err != nil {
+		log.Fatalf("Failed to initialize Collection Manager: %v", err)
+	}
+
 	log.Println("Initializing Ollama...")
 	if err := llmClient.Initialize(); err != nil {
 		log.Fatalf("Failed to initialize Ollama: %v", err)
 	}
 
-	// Create RAG agent
-	ragAgent := rag.NewAgent(vectorDB, llmClient, rag.DefaultAgentConfig())
+	// Create RAG agent with collection manager
+	ragAgent := rag.NewAgent(vectorDB, collectionManager, llmClient, rag.DefaultAgentConfig())
 
 	// Create RPC service with actual dependencies
 	rpcService := server.NewRPCService(ragAgent, vectorDB, llmClient)
 
-	// Set up HTTP handler for JSON-RPC
-	http.HandleFunc("/rpc", func(w http.ResponseWriter, r *http.Request) {
-		// Only allow POST requests
-		if r.Method != "POST" {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
+	log.Println("Starting JSON-RPC server on stdin/stdout")
 
-		// Read request body
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, "Failed to read request body", http.StatusBadRequest)
-			return
+	// Read from stdin and write to stdout for JSON-RPC communication
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line == "" {
+			continue
 		}
 
 		// Parse JSON-RPC request
 		var req JSONRPCRequest
-		if err := json.Unmarshal(body, &req); err != nil {
-			sendErrorResponse(w, -32700, "Parse error", req.ID)
-			return
+		if err := json.Unmarshal([]byte(line), &req); err != nil {
+			sendErrorResponse(-32700, "Parse error", req.ID)
+			continue
 		}
 
 		// Validate JSON-RPC version
 		if req.JSONRPC != "2.0" {
-			sendErrorResponse(w, -32600, "Invalid Request", req.ID)
-			return
+			sendErrorResponse(-32600, "Invalid Request", req.ID)
+			continue
 		}
 
 		// Handle different methods
@@ -129,18 +128,19 @@ func main() {
 			response.Result = result
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
-	})
+		responseBytes, err := json.Marshal(response)
+		if err != nil {
+			log.Printf("Failed to marshal response: %v", err)
+			continue
+		}
 
-	// Start server
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+		os.Stdout.Write(responseBytes)
+		os.Stdout.Write([]byte("\n"))
 	}
 
-	log.Printf("Starting JSON-RPC server on port %s", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	if err := scanner.Err(); err != nil {
+		log.Fatalf("Error reading from stdin: %v", err)
+	}
 }
 
 func handleQuery(service *server.RPCService, params interface{}) (interface{}, *RPCError) {
@@ -230,7 +230,7 @@ func handleGetMetrics(service *server.RPCService, params interface{}) (interface
 	return result, nil
 }
 
-func sendErrorResponse(w http.ResponseWriter, code int, message string, id interface{}) {
+func sendErrorResponse(code int, message string, id interface{}) {
 	response := JSONRPCResponse{
 		JSONRPC: "2.0",
 		Error: &RPCError{
@@ -240,6 +240,12 @@ func sendErrorResponse(w http.ResponseWriter, code int, message string, id inter
 		ID: id,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	responseBytes, err := json.Marshal(response)
+	if err != nil {
+		log.Printf("Failed to marshal error response: %v", err)
+		return
+	}
+
+	os.Stdout.Write(responseBytes)
+	os.Stdout.Write([]byte("\n"))
 }
