@@ -14,7 +14,5 @@ command! -nargs=? SmartKeybindSearch lua require('nvim-smart-keybind-search').se
 command! SmartKeybindSync lua require('nvim-smart-keybind-search').sync_keybindings()
 command! SmartKeybindHealth lua require('nvim-smart-keybind-search.health').check()
 
-" Add to health check system
-if has('nvim-0.7')
-  lua vim.health.register('nvim-smart-keybind-search', require('nvim-smart-keybind-search.health').check)
-endif
+" Health check is handled automatically by the health.lua module
+" No manual registration needed in modern Neovim

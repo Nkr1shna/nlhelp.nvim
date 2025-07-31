@@ -24,8 +24,6 @@ local default_config = {
 	backend = {
 		-- Path to the Go backend binary
 		binary_path = nil, -- Auto-detected if nil
-		-- Backend service port (0 for auto-assign)
-		port = 0,
 		-- Timeout for backend operations (milliseconds)
 		timeout = 5000,
 		-- Auto-start backend if not running
@@ -147,6 +145,10 @@ local function validate_config(config)
 		return false, "Backend timeout must be at least 1000ms"
 	end
 
+	if config.backend.binary_path and vim.fn.executable(config.backend.binary_path) ~= 1 then
+		return false, "Backend binary not found or not executable: " .. config.backend.binary_path
+	end
+
 	-- Validate picker configuration
 	if config.picker.min_query_length and config.picker.min_query_length < 1 then
 		return false, "Minimum query length must be at least 1"
@@ -181,8 +183,13 @@ end
 --- Auto-detect backend binary path
 --- @return string|nil Path to backend binary or nil if not found
 local function detect_binary_path()
+	-- Get the plugin directory
+	local plugin_dir = vim.fn.fnamemodify(debug.getinfo(1).source:sub(2), ":h:h:h")
+
 	-- Common locations to check
 	local possible_paths = {
+		plugin_dir .. "/server", -- Built server in plugin directory
+		plugin_dir .. "/main", -- Alternative binary name
 		vim.fn.stdpath("data") .. "/nvim-smart-keybind-search/server",
 		vim.fn.stdpath("config") .. "/nvim-smart-keybind-search/server",
 		"./server", -- Development path
@@ -204,10 +211,10 @@ end
 ---Auto-detects backend binary path if not provided.
 ---
 ---@param user_config? table User configuration overrides
----@field user_config.server_host? string Backend server host (default: "localhost")
----@field user_config.server_port? number Backend server port (default: 8080)
----@field user_config.auto_start? boolean Auto-start server on setup (default: true)
----@field user_config.health_check_interval? number Health check interval in seconds (default: 30)
+---@field user_config.backend? table Backend configuration
+---@field user_config.backend.binary_path? string Path to backend binary (auto-detected if nil)
+---@field user_config.backend.auto_start? boolean Auto-start backend on setup (default: true)
+---@field user_config.backend.timeout? number Backend timeout in milliseconds (default: 5000)
 ---@field user_config.auto_sync? boolean Auto-sync keybindings on setup (default: true)
 ---@field user_config.watch_changes? boolean Watch for keybinding changes (default: true)
 ---@field user_config.keymaps? table Keymap configuration
@@ -220,14 +227,15 @@ end
 ---```lua
 ---local config = require("nvim-smart-keybind-search.config")
 ---local merged_config = config.setup({
----  server_host = "localhost",
----  server_port = 8080,
----  auto_start = true,
+---  backend = {
+---    auto_start = true,
+---    timeout = 5000,
+---  },
 ---  keymaps = {
----    search = "<leader>ks",
+---    search = "<leader>sk",
 ---  },
 ---  picker = {
----    max_results = 10,
+---    max_results = 20,
 ---    show_explanations = true,
 ---  },
 ---})
@@ -246,6 +254,15 @@ function M.setup(user_config)
 	-- Auto-detect binary path if not provided
 	if not config.backend.binary_path then
 		config.backend.binary_path = detect_binary_path()
+
+		-- If still no binary path found, provide helpful error
+		if not config.backend.binary_path then
+			vim.notify(
+				"nvim-smart-keybind-search: Backend binary not found. "
+					.. "Please build the server with: go build -o server cmd/server/main.go",
+				vim.log.levels.WARN
+			)
+		end
 	end
 
 	-- Validate final configuration

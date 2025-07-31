@@ -150,16 +150,29 @@ end
 local function start_backend()
 	if not client_state.config or not client_state.config.backend.binary_path then
 		log_error("Backend binary path not configured")
+		vim.notify(
+			"nvim-smart-keybind-search: Please build the server first with:\n"
+				.. "go build -o server cmd/server/main.go",
+			vim.log.levels.ERROR
+		)
 		return false
 	end
 
 	local binary_path = client_state.config.backend.binary_path
 	if vim.fn.executable(binary_path) ~= 1 then
 		log_error("Backend binary not found or not executable: " .. binary_path)
+		vim.notify(
+			"nvim-smart-keybind-search: Backend binary not found at: "
+				.. binary_path
+				.. "\n"
+				.. "Please build the server with: go build -o server cmd/server/main.go",
+			vim.log.levels.ERROR
+		)
 		return false
 	end
 
 	log_debug("Starting backend: " .. binary_path)
+	vim.notify("nvim-smart-keybind-search: Starting backend server (this may take a moment)...", vim.log.levels.INFO)
 
 	-- Start the backend process
 	local job_id = vim.fn.jobstart({ binary_path }, {

@@ -26,9 +26,10 @@ local M = {}
 ---@usage
 ---```lua
 ---require("nvim-smart-keybind-search").setup({
----  server_host = "localhost",
----  server_port = 8080,
----  auto_start = true,
+---  backend = {
+---    auto_start = true,
+---    timeout = 5000,
+---  },
 ---})
 ---```
 ---
@@ -62,15 +63,14 @@ M._change_detection_timer = nil
 ---This function should be called before using any plugin features.
 ---
 ---@param opts? table User configuration options
----@field opts.server_host? string Backend server host (default: "localhost")
----@field opts.server_port? number Backend server port (default: 8080)
----@field opts.auto_start? boolean Auto-start server on setup (default: true)
----@field opts.health_check_interval? number Health check interval in seconds (default: 30)
+---@field opts.backend? table Backend configuration
+---@field opts.backend.binary_path? string Path to backend binary (auto-detected if nil)
+---@field opts.backend.auto_start? boolean Auto-start backend on setup (default: true)
+---@field opts.backend.timeout? number Backend timeout in milliseconds (default: 5000)
 ---@field opts.auto_sync? boolean Auto-sync keybindings on setup (default: true)
 ---@field opts.watch_changes? boolean Watch for keybinding changes (default: true)
 ---@field opts.keymaps? table Keymap configuration
----@field opts.keymaps.search? string Keymap for search command (default: "<leader>ks")
----@field opts.keymaps.health? string Keymap for health check (default: "<leader>kh")
+---@field opts.keymaps.search? string Keymap for search command (default: "<leader>sk")
 ---@field opts.picker? table Picker configuration
 ---@field opts.ui? table UI configuration
 ---@field opts.scanner? table Scanner configuration
@@ -79,25 +79,23 @@ M._change_detection_timer = nil
 ---@usage
 ---```lua
 ---require("nvim-smart-keybind-search").setup({
----  server_host = "localhost",
----  server_port = 8080,
----  auto_start = true,
----  health_check_interval = 30,
+---  backend = {
+---    auto_start = true,
+---    timeout = 5000,
+---  },
 ---  keymaps = {
----    search = "<leader>ks",
----    health = "<leader>kh",
+---    search = "<leader>sk",
 ---  },
 ---  picker = {
----    max_results = 10,
----    min_relevance = 0.3,
+---    max_results = 20,
+---    show_explanations = true,
 ---  },
 ---  ui = {
----    use_telescope = true,
 ---    show_explanations = true,
 ---  },
 ---  logging = {
 ---    level = "info",
----    file = "./logs/plugin.log",
+---    debug = false,
 ---  },
 ---})
 ---```
@@ -474,17 +472,15 @@ function M._populate_database_background()
 		local steps = {
 			{
 				name = "Built-in knowledge (Neovim quick reference)",
-				cmd = string.format("cd %s && go run scripts/populate_builtin_knowledge.go", script_dir),
+				cmd = string.format("cd %s && go run scripts/populate-builtin/main.go", script_dir),
 			},
 			{
 				name = "General knowledge (HuggingFace dataset)",
-				cmd = string.format("cd %s && go run scripts/populate_general_knowledge.go", script_dir),
+				cmd = string.format("cd %s && go run scripts/populate-general/main.go", script_dir),
 			},
 			{
 				name = "User keybindings",
-				func = function()
-					return keybind_scanner.populate_user_keybindings(data_dir)
-				end,
+				cmd = string.format("cd %s && go run scripts/populate-user/main.go", script_dir),
 			},
 		}
 
