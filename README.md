@@ -12,39 +12,48 @@ A Neovim plugin that provides intelligent, natural language search for keybindin
 - 🏥 **Health Monitoring**: Built-in health checks and monitoring
 - 🎯 **Smart Ranking**: Results ranked by relevance and context
 
-## Quick Start
+## Prerequisites
 
-### Prerequisites
-
-1. **Neovim 0.7+**
-2. **Go 1.21+** (for backend)
-3. **Python 3.8+** (for ChromaDB)
-4. **Ollama** (automatically installed by backend)
+- **Neovim 0.8+**
+- **Go 1.21+** (for the backend server)
+- **Python 3.8+** (for ChromaDB)
+- **Internet connection** (for initial HuggingFace dataset download)
 
 **Note:** The Go backend automatically handles Ollama installation and model management. It will install Ollama if not present and download the required model (llama3.2:3b) automatically on first run.
 
-### Installation
-#### 1. Install the Plugin
-**Using Lazy.nvim:**
+## Installation
+
+### lazy.nvim (Recommended)
+
 ```lua
-return {
+{
   "Nkr1shna/nlhelp.nvim",
   event = "VeryLazy",
+  dependencies = {
+    "snacks.nvim", -- Required for picker interface
+    "nvim-telescope/telescope.nvim", -- Alternative picker
+  },
   config = function()
     require("nvim-smart-keybind-search").setup({
       server_host = "localhost",
       server_port = 8080,
       auto_start = true,
       health_check_interval = 30,
+      keymaps = {
+        search = "<leader>ks",  -- Search keybindings
+        health = "<leader>kh",  -- Health check
+      },
     })
   end,
-  dependencies = {
-    "nvim-telescope/telescope.nvim",
+  cmd = { "SmartKeybindSearch", "SmartKeybindSync", "SmartKeybindHealth" },
+  keys = {
+    { "<leader>ks", "<cmd>SmartKeybindSearch<cr>", desc = "Smart keybinding search" },
   },
 }
 ```
 
-**Using Packer.nvim:**
+### packer.nvim
+
 ```lua
 return require('packer').startup(function(use)
   use {
@@ -55,19 +64,27 @@ return require('packer').startup(function(use)
         server_port = 8080,
         auto_start = true,
         health_check_interval = 30,
+        keymaps = {
+          search = "<leader>ks",
+          health = "<leader>kh",
+        },
       })
     end,
     requires = {
+      'snacks.nvim',
       'nvim-telescope/telescope.nvim',
     }
   }
 end)
 ```
 
-**Using vim-plug:**
+### vim-plug
+
 ```vim
 call plug#begin()
 Plug 'Nkr1shna/nlhelp.nvim'
+Plug 'snacks.nvim'
+Plug 'nvim-telescope/telescope.nvim'
 call plug#end()
 
 " Configuration
@@ -79,93 +96,111 @@ lua require("nvim-smart-keybind-search").setup({
 })
 ```
 
-#### 2. Setup Backend
+## What Happens on First Run
 
-The Go backend automatically handles all dependencies including Ollama, ChromaDB, and Python. No manual installation is required.
+When you call `setup()`, the plugin automatically:
 
-**Build and Start:**
-```bash
-# Build the Go backend
-go build -o server cmd/server/main.go
+1. **🔧 Installs dependencies** - Ollama, ChromaDB, and required Python packages
+2. **📚 Populates built-in knowledge** - From Neovim quick reference
+3. **🌐 Downloads general knowledge** - From HuggingFace dataset (aegis-nvim/neovim-help)
+4. **⌨️  Scans your keybindings** - Extracts and vectorizes your current keybindings
+5. **🚀 Starts the backend server** - Ready to search!
 
-# Build the database
-go run scripts/build_database.go
+This happens in the background, so you can continue using Neovim while it sets up.
 
-# Start the server
-./server
+## Usage
+
+Search for keybindings using natural language:
+
+```vim
+:SmartKeybindSearch
+" or use <leader>ks (default keybinding)
 ```
 
-### Usage
+Example queries:
+- "delete a word"
+- "jump to beginning of line"
+- "split window vertically"
+- "search and replace"
 
-#### Basic Search
+### Health Check
 
-1. **Open the search interface:**
-   ```vim
-   :SmartKeybindSearch
+Verify everything is working:
 
-2. **Check Ollama is running:**
-   ```bash
-   curl http://localhost:11434/api/tags
+```vim
+:SmartKeybindHealth
+```
 
-#### No Results Found
+## Configuration Options
+
+```lua
+require("nvim-smart-keybind-search").setup({
+  -- Server settings
+  server_host = "localhost",
+  server_port = 8080,
+  auto_start = true,
+  health_check_interval = 30,
+  
+  -- Database settings
+  auto_sync = true,        -- Auto-sync keybindings on startup
+  watch_changes = true,    -- Watch for keybinding changes
+  
+  -- Keymaps
+  keymaps = {
+    search = "<leader>ks",
+    health = "<leader>kh",
+  },
+  
+  -- Search settings
+  picker = {
+    max_results = 10,
+    min_relevance = 0.3,
+  },
+  
+  -- UI settings
+  ui = {
+    show_explanations = true,
+  },
+})
+```
+
+## Troubleshooting
+
+### Database Issues
+```vim
+:SmartKeybindHealth  " Check status
+:SmartKeybindSync    " Force re-sync keybindings
+```
+
+### Server Issues
+The plugin automatically manages the Go backend server. If you have issues:
+
+1. Check that Go 1.21+ is installed: `go version`
+2. Check the health status: `:SmartKeybindHealth`
+3. Check logs in `~/.local/share/nvim-smart-keybind-search/logs/`
+
+### Network Issues
+If the HuggingFace dataset download fails, the plugin will use fallback data and retry later when you have internet.
+
+### No Results Found
 
 1. **Check database is populated:**
    ```bash
    ./health_check.sh
+   ```
+
+2. **Check Ollama is running:**
+   ```bash
+   curl http://localhost:11434/api/tags
+   ```
 
 3. **Check query relevance threshold:**
    ```lua
    -- Lower the threshold in config
    min_relevance = 0.1
+   ```
 
-
-### Health Checks
-
-Run comprehensive health checks:
-
-```bash
-# Check all components
-./health_check.sh
-
-# Check from Neovim
-:SmartKeybindHealth
-```
-
-### Logs
-
-Check logs for detailed error information:
-
-```bash
-# Server logs
-tail -f logs/server.log
-
-# Plugin logs
-tail -f logs/plugin.log
-```
-
-## Development
-
-### Building from Source
-
-```bash
-# Clone the repository
-git clone https://github.com/Nkr1shna/nlhelp.nvim.git
-cd nvim-smart-keybind-search
-
-# Install dependencies
-go mod download
-
-# Build the server
-go build -o server cmd/server/main.go
-
-# Build the database
-go run scripts/build_database.go
-
-# Run tests
-go test ./...
-```
-
-### Project Structure
+## Project Structure
 
 ```
 .
@@ -184,22 +219,6 @@ go test ./...
 │   └── build_database.go # Database initialization
 └── plugin/
     └── nvim-smart-keybind-search.vim  # Vim plugin file
-```
-
-### Testing
-
-```bash
-# Run all tests
-go test ./...
-
-# Run specific test
-go test ./internal/server -v
-
-# Run benchmarks
-go test ./internal/server -bench=.
-
-# Run Lua tests
-busted lua/
 ```
 
 ## Contributing
@@ -226,3 +245,41 @@ MIT License - see [LICENSE](LICENSE) for details.
 - **Issues**: [GitHub Issues](https://github.com/Nkr1shna/nlhelp.nvim/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/Nkr1shna/nlhelp.nvim/discussions)
 - **Documentation**: [Wiki](https://github.com/Nkr1shna/nlhelp.nvim/wiki)
+
+## Development
+
+### Building from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/Nkr1shna/nlhelp.nvim.git
+cd nvim-smart-keybind-search
+
+# Install dependencies
+go mod download
+
+# Build the server
+go build -o server cmd/server/main.go
+
+# Build the database
+go run scripts/build_database.go
+
+# Run tests
+go test ./...
+```
+
+### Testing
+
+```bash
+# Run all tests
+go test ./...
+
+# Run specific test
+go test ./internal/server -v
+
+# Run benchmarks
+go test ./internal/server -bench=.
+
+# Run Lua tests
+busted lua/
+```
